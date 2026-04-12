@@ -6,6 +6,30 @@ Beat 'em up 2D de ação e sobrevivência construído do zero com Python e pygam
 
 ---
 
+## A História
+
+Yusuki tem 11 anos e uma obsessão: videogames dos anos 80. Seu quarto é um museu vivo — cartuchos empilhados, controles enfileirados, cartazes nas paredes. Enquanto outras crianças dormem cedo, Yusuki passa horas decifrando cada pixel dos seus jogos favoritos, memorizando padrões, inventando histórias para os personagens que ninguém mais se importava.
+
+Os adultos chamavam de vício. Yusuki chamava de paixão.
+
+Numa sexta-feira à noite, depois de uma maratona que durou até as 3h da manhã, Yusuki adormeceu com o controle na mão — e entrou em um sonho diferente de todos os outros. Desta vez, o sonho não desfazia. Não virava outra coisa. Não tinha fim.
+
+Ele se via no meio de uma **masmorra viva**, onde seus três heróis preferidos lutavam incansavelmente contra criaturas que ele reconhecia: monstros dos seus jogos favoritos, misturados com seres da sua própria imaginação, todos torcidos por algo obscuro.
+
+Uma voz grave preencheu o silêncio entre os golpes:
+
+> *"Bem-vindo à Masmorra dos Sonhos, Yusuki. Eu esperava por você há muito tempo."*
+
+**O Inimigo Final** não é um monstro comum. É uma entidade que existe no espaço entre os sonhos — antiga, faminta, invisível para quem acorda. Ela se alimenta de imaginação: quanto mais vívida, mais nutritiva. E a imaginação de Yusuki, moldada por anos absorvendo histórias, mundos e personagens, é a mais rica que ela jamais encontrou.
+
+Para mantê-lo preso, O Inimigo Final usa o próprio sonho de Yusuki como prisão — transforma seus mundos favoritos em labirintos, seus inimigos queridos em guardas, e coloca cinco de seus tenentes mais poderosos como guardiões de cada passagem.
+
+**Se Yusuki não os derrotar, dorme para sempre.**
+
+Os três heróis olham para ele. Ele os conhece melhor do que ninguém — cada golpe, cada fraqueza, cada estilo. A escolha é dele. O sonho espera.
+
+---
+
 ## Rodando o jogo
 
 **Dependência única:** pygame 2.x
@@ -28,7 +52,8 @@ python "import pygame.py"
 | `← →` | Mover |
 | `↑` | Pular |
 | `Espaço` | Atacar (combo encadeado) |
-| `E` | Poder especial |
+| `CTRL esq.` | Poder especial (custa 10 MP) |
+| `ALT esq.` | Bloquear (reduz dano recebido) |
 | `ESC` | Pausar |
 | `R` | Ranking |
 | `Q` | Sair |
@@ -49,18 +74,43 @@ Três estilos de jogo completamente distintos. A escolha muda a estratégia inte
 
 Cada personagem tem arma e poder especial únicos:
 
-| Personagem | Ataque normal | Poder especial (`E`) |
-|------------|--------------|----------------------|
+| Personagem | Ataque normal | Poder especial (`CTRL`) |
+|------------|--------------|------------------------|
 | **Guerreiro** | Machado giratório | 5 machados orbitando em volta do personagem |
 | **Mago** | Cajado + orbe mágico pulsante | 6 chamas azuis orbitando em volta do personagem |
 | **Ladino** | Espada em arco de slash | 5 espadas orbitando em volta do personagem |
+
+### Animação de bloqueio (`ALT`)
+
+Segurar `ALT` ativa a postura de defesa — cada personagem ergue sua arma na frente do corpo. Golpes bloqueados causam apenas **33% do dano normal** e produzem um impacto visual distinto (explosão dourada + faíscas).
+
+| Personagem | Postura de defesa |
+|------------|-------------------|
+| **Guerreiro** | Machado horizontal — escudo de força bruta |
+| **Mago** | Cajado ereto — barreira mágica |
+| **Ladino** | Espada diagonal — parade rápida |
+
+---
+
+## Sistema de MP
+
+Cada personagem possui uma barra de **100 MP** exibida abaixo do HP. Usar o poder especial consome **10 MP**. Sem MP suficiente, o especial não dispara.
+
+MP é recuperado coletando cristais de energia que aparecem no cenário:
+
+| Item | Efeito | Frequência |
+|------|--------|-----------|
+| Cristal azul claro | +10 MP | Comum |
+| Cristal azul | +20 MP | Comum |
+| Cristal roxo | +50 MP | Raro |
+| Cristal dourado | MP cheio | Muito raro |
 
 ---
 
 ## Como o jogo funciona
 
 ### Ondas e progressão
-O jogo é infinito em teoria — as ondas não têm fim e a dificuldade escala continuamente. Cada onda elimianda recupera 20 HP e dá bônus de pontuação. Inimigos ficam mais rápidos, mais resistentes e mais numerosos conforme as ondas avançam.
+O jogo é infinito em teoria — as ondas não têm fim e a dificuldade escala continuamente. Cada onda eliminada recupera 20 HP e dá bônus de pontuação. Inimigos ficam mais rápidos, mais resistentes e mais numerosos conforme as ondas avançam.
 
 ### Sistema de combo
 Três ataques em sequência ativam o **Golpe Devastador**: o terceiro hit causa o dobro do dano normal. O tempo entre golpes precisa ser curto — o encadeamento se quebra se você hesitar.
@@ -68,27 +118,29 @@ Três ataques em sequência ativam o **Golpe Devastador**: o terceiro hit causa 
 ### Bosses
 A cada cinco ondas, a música muda e um Boss entra em cena. Cada boss tem três fases — ao perder HP, fica mais agressivo e rápido. Derrotá-lo vale pontuação alta e garante um item no chão.
 
-| Boss | HP | Ataque especial |
-|------|----|----------------|
-| Dragão | 400 | Rajada de fogo |
-| Cavaleiro Sombrio | 500 | Carga devastadora |
-| Mago Maligno | 350 | Projéteis mágicos |
-| Lorde Demônio | 600 | Explosão de projéteis |
-| Deus do Caos | 800 | Ataque total |
+| Boss | HP | Elemento especial |
+|------|----|-------------------|
+| Dragão | 800 | Fogo — rajada de bolas de fogo |
+| Cavaleiro Sombrio | 1000 | Raio — descargas elétricas em leque |
+| Mago Maligno | 700 | Gelo — cristais de gelo em espiral |
+| Lorde Demônio | 1200 | Pedra — rochas pesadas e lentas |
+| Deus do Caos | 1600 | Ultimate — um projétil de cada elemento |
+
+Cada boss dispara seu especial periodicamente — projéteis animados que saem do boss e viajam em direção ao jogador. Quanto mais baixo o HP, mais frequente e numeroso o disparo.
 
 ### Fase Final
 
 A partir da onda 21 começa a **Fase Final** — o cenário muda e cinco bosses supremos surgem em sequência, um por onda, cada um mais poderoso que o anterior:
 
-| Boss final | HP | Estilo |
-|------------|----|--------|
-| Hydra das Trevas | 600 | Fogo |
-| Senhor da Escuridão | 700 | Carga |
-| Arauto do Caos | 800 | Mágico |
-| Protetor Amaldiçoado | 900 | Caos |
-| **O Inimigo Final** | **1200** | **Ultimate** |
+| Boss final | HP | Elemento |
+|------------|----|----------|
+| Hydra das Trevas | 1200 | Fogo |
+| Senhor da Escuridão | 1400 | Raio |
+| Arauto do Caos | 1600 | Água |
+| Protetor Amaldiçoado | 1800 | Pedra |
+| **O Inimigo Final** | **4800** | **Ultimate** |
 
-Derrotar O Inimigo Final encerra o jogo com a tela de **Vitória**.
+Derrotar O Inimigo Final encerra o jogo com a tela de **Vitória** — Yusuki acorda livre.
 
 ### Vidas
 Três vidas por partida. Ao zerar o HP, uma vida é consumida e o HP é completamente restaurado. Quando a última vida acaba, vai para o Game Over.
@@ -116,13 +168,17 @@ Três vidas por partida. Ao zerar o HP, uma vida é consumida e o HP é completa
 
 ## Itens
 
-Inimigos têm 25% de chance de dropar algo ao morrer. Caminhe em cima para coletar automaticamente.
+Inimigos têm chance de dropar algo ao morrer. Caminhe em cima para coletar automaticamente.
 
 | Item | Efeito |
 |------|--------|
 | Poção | +25 HP |
 | Poção Forte | +50 HP |
 | Bomba | 40 de dano em todos os inimigos na tela |
+| Cristal azul claro | +10 MP |
+| Cristal azul | +20 MP |
+| Cristal roxo | +50 MP |
+| Cristal dourado | MP cheio |
 
 ---
 
@@ -130,14 +186,14 @@ Inimigos têm 25% de chance de dropar algo ao morrer. Caminhe em cima para colet
 
 O cenário troca sozinho conforme a onda progride, com música própria para cada ambiente:
 
-| Ondas | Cenário |
-|-------|---------|
-| 1 – 4 | Masmorra |
-| 5 – 9 | Floresta |
-| 10 – 14 | Castelo |
-| 15 – 19 | Vulcão |
-| 20 | Céu |
-| 21+ | Fase Final |
+| Ondas | Cenário | Elemento do sonho |
+|-------|---------|-------------------|
+| 1 – 4 | Masmorra | As dungeons dos seus RPGs favoritos |
+| 5 – 9 | Floresta | As florestas dos seus jogos de aventura |
+| 10 – 14 | Castelo | Os castelos que ele desenhava no caderno |
+| 15 – 19 | Vulcão | Os vulcões dos seus jogos de plataforma |
+| 20 | Céu | A fronteira do sonho |
+| 21+ | Fase Final | O Núcleo — o coração escuro do sonho |
 
 Durante os bosses a música muda para a trilha de batalha. Se um arquivo de música não for encontrado, o jogo cai automaticamente para `musica_fundo.mp3` — sem crash, sem interrupção.
 
@@ -157,10 +213,19 @@ masmorra/
 ├── ranking.json            # Recordes (gerado automaticamente)
 │
 ├── personagem.png          # Guerreiro
-├── inimigo.png – inimigo12.png   # Inimigos 1–12
+├── mago.png                # Mago
+├── ladino.png              # Ladino
+├── inimigo.png – inimigo16.png   # Inimigos 1–16
+├── inimigofinal.png        # O Inimigo Final
 ├── item.png                # Sprite dos itens
-├── machado.png             # Arma do jogador
+├── machado.png             # Arma do guerreiro
+├── cajado.png              # Arma do mago
+├── espada.png              # Arma do ladino
 ├── fundo.jpg               # Cenário da masmorra
+├── fundofloresta.png       # Cenário floresta
+├── fundocastelo.png        # Cenário castelo
+├── fundovulcão.png         # Cenário vulcão
+├── fundocéu.png            # Cenário céu
 │
 ├── ataque.wav              # Som de ataque
 ├── colisao.wav             # Som de dano
@@ -172,9 +237,7 @@ masmorra/
 **Arquivos opcionais** — o jogo gera tudo proceduralmente se não encontrar:
 
 ```
-personagem_mago.png / personagem_ladino.png
 boss1.png … boss5.png
-inimigo13.png … inimigo22.png
 item_bota.png / item_bomba.png / bomba.wav
 musica_dungeon.mp3 / musica_floresta.mp3 / musica_castelo.mp3
 musica_vulcao.mp3 / musica_ceu.mp3 / musica_boss.mp3

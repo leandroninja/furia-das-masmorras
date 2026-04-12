@@ -220,6 +220,40 @@ def _sp_bomba():
     pygame.draw.circle(s,LARAN,(20,1),3)
     pygame.draw.circle(s,(60,60,80),(15,20),8); return s
 
+def _sp_mp10():
+    s=_ns(26,26)
+    pygame.draw.circle(s,(100,200,255),  (13,13),11)
+    pygame.draw.circle(s,(180,235,255),  (10,10), 5)
+    pygame.draw.circle(s,(255,255,255),  (10,10), 2)
+    return s
+
+def _sp_mp20():
+    s=_ns(28,28)
+    pygame.draw.circle(s,(50,100,240),   (14,14),12)
+    pygame.draw.circle(s,(130,180,255),  (11,11), 5)
+    pygame.draw.circle(s,(220,240,255),  (11,11), 2)
+    return s
+
+def _sp_mp50():
+    s=_ns(30,30)
+    pygame.draw.circle(s,(140,60,220),   (15,15),13)
+    pygame.draw.circle(s,(210,140,255),  (12,12), 6)
+    pygame.draw.circle(s,(240,220,255),  (12,12), 2)
+    return s
+
+def _sp_mpfull():
+    s=_ns(32,32)
+    pygame.draw.circle(s,(220,180,0),    (16,16),14)
+    pts=[]
+    import math as _m
+    for i in range(8):
+        r=14 if i%2==0 else 7
+        a=_m.radians(i*45-90)
+        pts.append((int(16+r*_m.cos(a)),int(16+r*_m.sin(a))))
+    pygame.draw.polygon(s,(255,230,50),pts)
+    pygame.draw.circle(s,(255,255,200),  (16,16), 5)
+    return s
+
 # ═══════════════════════════════════════════════════════════════
 #  CARREGAMENTO DE ASSETS
 # ═══════════════════════════════════════════════════════════════
@@ -301,7 +335,8 @@ imgs_boss = [_img(f"boss{i+1}.png", lambda i=i:_sp_boss(i)) for i in range(5)]
 machado    = _img("machado.png")
 cajado_img = _imgsc("cajado.png",(36,57), lambda: machado)
 espada_img = _imgsc("espada.png",(34,58), lambda: machado)
-imgs_item = {"pocao":_img("item.png",_sp_pocao), "bota":_img("item_bota.png",_sp_bota), "bomba":_img("item_bomba.png",_sp_bomba)}
+imgs_item = {"pocao":_img("item.png",_sp_pocao), "bota":_img("item_bota.png",_sp_bota), "bomba":_img("item_bomba.png",_sp_bomba),
+             "mp10":_sp_mp10(), "mp20":_sp_mp20(), "mp50":_sp_mp50(), "mpfull":_sp_mpfull()}
 
 def _trans_bottom(img):
     """Conta pixels transparentes no fundo do sprite para alinhar ao chão."""
@@ -404,10 +439,12 @@ def _fundo_final():
             pygame.draw.line(s,(int(15+15*t),int(5*t),int(20+25*t)),(0,y),(LARGURA_TELA,y))
         pygame.draw.rect(s,(35,5,50),(0,CHAO_Y,LARGURA_TELA,ALTURA_TELA-CHAO_Y)); return s
 
+BG_W = 1100  # fundo mais largo que a tela para permitir scroll de parallax
+def _widen(s): return pygame.transform.scale(s,(BG_W,ALTURA_TELA))
 def _load_bg(path, fb):
-    try: img=pygame.image.load(path).convert(); return pygame.transform.scale(img,(LARGURA_TELA,ALTURA_TELA))
-    except: return fb()
-FUNDOS = [_fundo_dungeon(), _load_bg("fundofloresta.png",_fundo_floresta), _load_bg("fundocastelo.png",_fundo_castelo), _load_bg("fundovulcão.png",_fundo_vulcao), _load_bg("fundocéu.png",_fundo_ceu), _fundo_final()]
+    try: img=pygame.image.load(path).convert(); return pygame.transform.scale(img,(BG_W,ALTURA_TELA))
+    except: return _widen(fb())
+FUNDOS = [_widen(_fundo_dungeon()), _load_bg("fundofloresta.png",_fundo_floresta), _load_bg("fundocastelo.png",_fundo_castelo), _load_bg("fundovulcão.png",_fundo_vulcao), _load_bg("fundocéu.png",_fundo_ceu), _widen(_fundo_final())]
 MUSICAS = [["musica_dungeon.mp3","musica_fundo.mp3"],["musica_floresta.mp3","musica_fundo.mp3"],
            ["musica_castelo.mp3","musica_fundo.mp3"],["musica_vulcao.mp3","musica_fundo.mp3"],
            ["musica_ceu.mp3","musica_fundo.mp3"],["musica_final.mp3","musica_fundo.mp3"]]
@@ -425,9 +462,11 @@ def tocar_cenario(idx, boss=False):
 #  DADOS
 # ═══════════════════════════════════════════════════════════════
 DADOS_INI = [
-    (3,6,20,5),(5,8,30,10),(4,7,25,7),(6,9,35,12),(3,5,40,8),(7,10,15,3),
-    (2,4,50,15),(5,7,20,6),(4,6,30,9),(6,8,25,7),(3,5,35,10),(8,10,10,2),
-    (2,4,25,8),(4,5,30,10),(3,5,18,5),(4,7,22,6),(3,6,20,8),
+    # tipos 1-12: vida x2
+    (3,6,40,5),(5,8,60,10),(4,7,50,7),(6,9,70,12),(3,5,80,8),(7,10,30,3),
+    (2,4,100,15),(5,7,40,6),(4,6,60,9),(6,8,50,7),(3,5,70,10),(8,10,20,2),
+    # tipos 13-16: vida x3 | tipos 17-22: inalterados
+    (2,4,75,8),(4,5,90,10),(3,5,54,5),(4,7,66,6),(3,6,20,8),
     (1,3,80,18),(2,4,28,4),(6,9,15,7),(3,6,35,9),(3,5,30,8),
 ]
 COMPORT = {13:'atirador',14:'carregador',15:'dividido',16:'fantasma',17:'berseker',
@@ -439,18 +478,18 @@ DADOS_CHAR = [
     {"nome":"Ladino",   "sub":"Rápido e ágil",    "vida":80, "vel":8,"dano":8, "esp":20,"alc":55, "dcd":25,"cor":CINZA},
 ]
 DADOS_BOSS = [
-    {"nome":"Dragão",         "vida":400,"dano":20,"vel":3,"pat":"fogo"},
-    {"nome":"Cavaleiro Sombrio","vida":500,"dano":25,"vel":4,"pat":"carga"},
-    {"nome":"Mago Maligno",   "vida":350,"dano":18,"vel":3,"pat":"magico"},
-    {"nome":"Lorde Demônio",  "vida":600,"dano":30,"vel":5,"pat":"caos"},
-    {"nome":"Deus do Caos",   "vida":800,"dano":40,"vel":6,"pat":"ultimate"},
+    {"nome":"Dragão",           "vida":800, "dano":20,"vel":3,"pat":"fogo"},
+    {"nome":"Cavaleiro Sombrio","vida":1000,"dano":25,"vel":4,"pat":"carga"},
+    {"nome":"Mago Maligno",     "vida":700, "dano":18,"vel":3,"pat":"magico"},
+    {"nome":"Lorde Demônio",    "vida":1200,"dano":30,"vel":5,"pat":"caos"},
+    {"nome":"Deus do Caos",     "vida":1600,"dano":40,"vel":6,"pat":"ultimate"},
 ]
 DADOS_FBOSS = [
-    {"nome":"Hydra das Trevas",     "vida":600, "dano":22,"vel":3,"pat":"fogo"},
-    {"nome":"Senhor da Escuridão",  "vida":700, "dano":28,"vel":4,"pat":"carga"},
-    {"nome":"Arauto do Caos",       "vida":800, "dano":25,"vel":3,"pat":"magico"},
-    {"nome":"Protetor Amaldiçoado", "vida":900, "dano":32,"vel":4,"pat":"caos"},
-    {"nome":"O INIMIGO FINAL",      "vida":1200,"dano":40,"vel":5,"pat":"ultimate"},
+    {"nome":"Hydra das Trevas",     "vida":1200,"dano":22,"vel":3,"pat":"fogo"},
+    {"nome":"Senhor da Escuridão",  "vida":1400,"dano":28,"vel":4,"pat":"carga"},
+    {"nome":"Arauto do Caos",       "vida":1600,"dano":25,"vel":3,"pat":"magico"},
+    {"nome":"Protetor Amaldiçoado", "vida":1800,"dano":32,"vel":4,"pat":"caos"},
+    {"nome":"O INIMIGO FINAL",      "vida":4800,"dano":40,"vel":5,"pat":"ultimate"},
 ]
 
 # ═══════════════════════════════════════════════════════════════
@@ -485,17 +524,21 @@ class Part:
         self.x=float(x); self.y=float(y); a=random.uniform(0,2*math.pi); spd=random.uniform(2,7)
         self.vx=math.cos(a)*spd; self.vy=math.sin(a)*spd-3
         self.r=random.randint(3,7); self.cor=cor; self.a=255; self.vivo=True
+        r0=self.r; self._surf=_ns(r0*2+4,r0*2+4)   # pre-alocado uma vez
     def update(self):
         self.x+=self.vx; self.y+=self.vy; self.vy+=.4; self.a-=15; self.r=max(1,self.r-.15)
         if self.a<=0: self.vivo=False
     def draw(self,s):
         if not self.vivo: return
-        r=int(self.r); surf=_ns(r*2+2,r*2+2)
-        pygame.draw.circle(surf,self.cor+(max(0,self.a),),(r,r),r); s.blit(surf,(int(self.x-r),int(self.y-r)))
+        r=int(self.r)
+        self._surf.fill((0,0,0,0))
+        pygame.draw.circle(self._surf,self.cor+(max(0,int(self.a)),),(r,r),r)
+        s.blit(self._surf,(int(self.x-r),int(self.y-r)))
 
 parts=[]
 def add_parts(x,y,cor,n=6):
-    for _ in range(n): parts.append(Part(x,y,cor))
+    if len(parts)<400:
+        for _ in range(n): parts.append(Part(x,y,cor))
 
 # ═══════════════════════════════════════════════════════════════
 #  PROJÉTIL
@@ -511,6 +554,98 @@ class Proj(pygame.sprite.Sprite):
         if self.rect.right<0 or self.rect.left>LARGURA_TELA: self.kill()
 
 # ═══════════════════════════════════════════════════════════════
+#  PROJÉTIL ESPECIAL DO BOSS
+# ═══════════════════════════════════════════════════════════════
+class BossProj(pygame.sprite.Sprite):
+    """Projétil animado com elemento visual — sai do boss em direção ao jogador."""
+    _EL={
+        'fogo':    {'r':15,'spd':7, 'pcor':(255,100,0)},
+        'raio':    {'r':11,'spd':11,'pcor':(180,180,255)},
+        'gelo':    {'r':13,'spd':6, 'pcor':(150,230,255)},
+        'agua':    {'r':13,'spd':6, 'pcor':(50,160,255)},
+        'pedra':   {'r':17,'spd':5, 'pcor':(140,110,70)},
+        'ultimate':{'r':19,'spd':8, 'pcor':(255,80,255)},
+    }
+    def __init__(self,x,y,ax,ay,elem,dano):
+        super().__init__()
+        self.elem=elem; self.dano=dano; self.t=0
+        ed=self._EL.get(elem,self._EL['fogo'])
+        self.r=ed['r']; self.pcor=ed['pcor']
+        sz=(self.r+8)*2
+        self.image=_ns(sz,sz)
+        self.rect=self.image.get_rect(center=(x,y))
+        self.fx=float(x); self.fy=float(y)
+        dx=ax-x; dy=ay-y; dist=max(1,math.sqrt(dx*dx+dy*dy))
+        spd=ed['spd']
+        self.vx=dx/dist*spd; self.vy=dy/dist*spd
+        self._render()
+
+    def update(self):
+        self.t+=1
+        self.fx+=self.vx; self.fy+=self.vy
+        self.rect.center=(int(self.fx),int(self.fy))
+        if(self.rect.right<-30 or self.rect.left>LARGURA_TELA+30
+                or self.rect.bottom<-30 or self.rect.top>ALTURA_TELA+30):
+            self.kill(); return
+        if self.t%3==0: add_parts(int(self.fx),int(self.fy),self.pcor,2)
+        self._render()
+
+    def _render(self):
+        self.image.fill((0,0,0,0))
+        r=self.r; sz=self.image.get_width(); cx=cy=sz//2; t=self.t; e=self.elem
+        if e=='fogo':
+            p=int(abs(math.sin(t*.25))*5)
+            pygame.draw.circle(self.image,(255,80,0,50),(cx,cy),r+6+p)
+            pygame.draw.circle(self.image,(255,110,0,120),(cx,cy),r+2+p)
+            pygame.draw.circle(self.image,(255,80,0,210),(cx,cy),r)
+            pygame.draw.circle(self.image,(255,200,0,255),(cx,cy),r//2)
+            pygame.draw.circle(self.image,(255,255,180,255),(cx,cy),max(2,r//4))
+        elif e=='raio':
+            pygame.draw.circle(self.image,(70,70,200),(cx,cy),r)
+            pygame.draw.circle(self.image,(150,150,255),(cx,cy),r//2)
+            for i in range(6):
+                a=math.radians(i*60+t*14)
+                x1=cx+int(math.cos(a)*(r//2)); y1=cy+int(math.sin(a)*(r//2))
+                ma=a+math.radians(20)
+                mx=cx+int(math.cos(ma)*(r-2)); my=cy+int(math.sin(ma)*(r-2))
+                x2=cx+int(math.cos(a)*(r+5)); y2=cy+int(math.sin(a)*(r+5))
+                pygame.draw.line(self.image,(190,190,255),(x1,y1),(mx,my),2)
+                pygame.draw.line(self.image,(220,220,255),(mx,my),(x2,y2),2)
+            pygame.draw.circle(self.image,(240,240,255),(cx,cy),4)
+        elif e=='gelo':
+            pygame.draw.circle(self.image,(55,175,225),(cx,cy),r)
+            pygame.draw.circle(self.image,(175,230,255),(cx,cy),r//2)
+            for i in range(6):
+                a=math.radians(i*60+t*4)
+                x2=cx+int(math.cos(a)*(r+5)); y2=cy+int(math.sin(a)*(r+5))
+                pygame.draw.line(self.image,(210,245,255),(cx,cy),(x2,y2),2)
+                xa=cx+int(math.cos(a+.45)*(r-2)); ya=cy+int(math.sin(a+.45)*(r-2))
+                pygame.draw.line(self.image,(190,235,255),(cx,cy),(xa,ya),1)
+            pygame.draw.circle(self.image,(235,255,255),(cx,cy),max(2,r//4))
+        elif e=='agua':
+            p=int(abs(math.sin(t*.13))*4)
+            pygame.draw.circle(self.image,(0,85,200),(cx,cy),r)
+            for ring in [r//2+p, r//3+1]:
+                pygame.draw.circle(self.image,(70,175,255),(cx,cy),ring,3)
+            pygame.draw.circle(self.image,(175,220,255),(cx,cy),max(2,r//4))
+        elif e=='pedra':
+            pygame.draw.circle(self.image,(95,75,50),(cx,cy),r)
+            pygame.draw.circle(self.image,(150,125,85),(cx-3,cy-3),r//3)
+            for i in range(4):
+                a=math.radians(i*90+15)
+                x2=cx+int(math.cos(a)*r); y2=cy+int(math.sin(a)*r)
+                pygame.draw.line(self.image,(55,40,25),(cx,cy),(x2,y2),3)
+            pygame.draw.circle(self.image,(175,150,105),(cx,cy),max(2,r//5))
+        else:  # ultimate — anel de todos os elementos girando
+            UCORS=[(255,60,0),(180,180,255),(80,220,255),(50,175,255),(100,80,55),(255,0,210)]
+            for i,uc in enumerate(UCORS):
+                a=math.radians(i*60+t*11)
+                px=cx+int(math.cos(a)*(r-4)); py=cy+int(math.sin(a)*(r-4))
+                pygame.draw.circle(self.image,uc,(px,py),7)
+            pygame.draw.circle(self.image,(255,255,255),(cx,cy),r//3)
+            pygame.draw.circle(self.image,(200,200,255),(cx,cy),max(2,r//6))
+
+# ═══════════════════════════════════════════════════════════════
 #  PERSONAGEM
 # ═══════════════════════════════════════════════════════════════
 class Personagem(pygame.sprite.Sprite):
@@ -522,6 +657,8 @@ class Personagem(pygame.sprite.Sprite):
         self.VMAX=d["vida"]; self.vel=d["vel"]; self.DATQ=d["dano"]
         self.DESP=d["esp"]; self.ALC=d["alc"]; self.DCD=d["dcd"]
         self.vida=self.VMAX; self.dir=True
+        self.mp=100; self.VMAX_MP=100
+        self.bloq=False; self.bloq_flash=0
         self.vy=0.0; self.chao=True
         self.fatq=0; self.esp_ativo=False; self.ang=0
         self.chain=0; self.chain_t=0; self.chain_cd=0
@@ -548,6 +685,8 @@ class Personagem(pygame.sprite.Sprite):
         if self.fcombo>0: self.fcombo-=1
         else: self.combo=0
         if self.inv>0: self.inv-=1
+        self.bloq=bool(k[pygame.K_LALT])
+        if self.bloq_flash>0: self.bloq_flash-=1
 
     def _alc(self,esp=False):
         m=self.ALC*(2 if esp else 1); return self.rect.inflate(m*2,0)
@@ -581,6 +720,12 @@ class Personagem(pygame.sprite.Sprite):
     def dano(self,d):
         global shake_f, flash_a, flash_c
         if self.inv>0: return False
+        if self.bloq:
+            d=max(1,d//3); self.inv=18; self.bloq_flash=16
+            self.vida=max(0,self.vida-d)
+            shake_f=3; flash_a=60; flash_c=(200,220,255)
+            add_parts(self.rect.centerx,self.rect.top-10,(255,240,120),8)
+            _play(som_col); return True
         self.vida=max(0,self.vida-d); self.inv=60
         shake_f=8; flash_a=120; flash_c=VERM; _play(som_col); return True
 
@@ -646,6 +791,41 @@ class Personagem(pygame.sprite.Sprite):
                     r.x+=55*lado; r.y-=8
                     s.blit(me,r.topleft)
 
+        # ── BLOQUEIO ──
+        if self.bloq:
+            lado=1 if self.dir else -1
+            if self.ti==1:   # Mago: cajado ereto, na frente (mesma altura do tronco)
+                bx=self.rect.centerx+lado*55; by=self.rect.centery+8
+                bimg=pygame.transform.rotozoom(cajado_img,8*lado,3.2)
+            elif self.ti==0:  # Guerreiro: machado horizontal de defesa
+                bx=self.rect.centerx+lado*58; by=self.rect.centery-10
+                bimg=pygame.transform.rotozoom(machado,55*lado,3.2)
+            else:              # Ladino: espada diagonal de defesa
+                bx=self.rect.centerx+lado*56; by=self.rect.centery-12
+                bimg=pygame.transform.rotozoom(espada_img,50*lado,3.2)
+            if not self.dir: bimg=pygame.transform.flip(bimg,True,False)
+            br=bimg.get_rect(center=(bx,by)); s.blit(bimg,br.topleft)
+            # brilho pulsante ao redor da arma
+            pulse=int(abs(math.sin(pygame.time.get_ticks()*.007))*14)+18
+            gs=_ns(pulse*2+2,pulse*2+2)
+            pygame.draw.circle(gs,(180,220,255,75),(pulse,pulse),pulse)
+            s.blit(gs,(bx-pulse,by-pulse))
+            # impacto do golpe — maior e mais vistoso
+            if self.bloq_flash>0:
+                pct=self.bloq_flash/16
+                rf=int(40+pct*34)
+                gf=_ns(rf*2+2,rf*2+2); al=int(pct*240)
+                pygame.draw.circle(gf,(255,240,80,al),(rf,rf),rf)
+                pygame.draw.circle(gf,(255,255,200,min(255,al+60)),(rf,rf),rf*2//3)
+                pygame.draw.circle(gf,(255,255,255,min(255,al+120)),(rf,rf),rf//3)
+                s.blit(gf,(bx-rf,by-rf))
+                for i in range(10):
+                    a=math.radians(i*36+self.bloq_flash*22)
+                    ln=int(pct*32+10)
+                    pygame.draw.line(s,(255,230,50),
+                        (bx+int(math.cos(a)*14),by+int(math.sin(a)*14)),
+                        (bx+int(math.cos(a)*(14+ln)),by+int(math.sin(a)*(14+ln))),3)
+
 # ═══════════════════════════════════════════════════════════════
 #  INIMIGO
 # ═══════════════════════════════════════════════════════════════
@@ -695,7 +875,7 @@ class Inimigo(pygame.sprite.Sprite):
         if self.tatq>0: self.tatq-=1
         if self.fatq>0: self.fatq-=1
         if self.flash>0: self.flash-=1
-        if personagem and self.rect.colliderect(personagem.rect):
+        if personagem and self.rect.inflate(30,0).colliderect(personagem.rect):
             if self.tatq<=0:
                 personagem.dano(self.dano); self.tatq=self.CD; self.fatq=18
         c=self.comp
@@ -710,15 +890,16 @@ class Inimigo(pygame.sprite.Sprite):
     def _mover(self):
         if not personagem: return
         dx=personagem.rect.centerx-self.rect.centerx
+        stop=self.rect.width//2+personagem.rect.width//2+8
         if self.comp=='atirador':
             if abs(dx)<self.dmin: self.rect.x-=self.vel if dx>0 else -self.vel
             elif abs(dx)>self.dmin+60: self.rect.x+=self.vel if dx>0 else -self.vel
         elif self.comp=='carregador' and self.carg:
             self.rect.x+=18 if dx>0 else -18
-            if abs(dx)<5 or abs(dx)>400: self.carg=False; self.tcarg=120
+            if abs(dx)<stop or abs(dx)>400: self.carg=False; self.tcarg=120
         else:
-            if abs(dx)>4: self.rect.x+=self.vel if dx>0 else -self.vel
-        if abs(dx)>4: self.dir=dx>0
+            if abs(dx)>stop: self.rect.x+=self.vel if dx>0 else -self.vel
+        if abs(dx)>stop: self.dir=dx>0
 
     def _atirador(self):
         if not(projeteis_g and personagem): return
@@ -779,6 +960,11 @@ class Inimigo(pygame.sprite.Sprite):
 # ═══════════════════════════════════════════════════════════════
 #  BOSS
 # ═══════════════════════════════════════════════════════════════
+# Mapeamento padrão: padrão de ataque → elemento visual do especial
+_PAT_ELEM       = {'fogo':'fogo','carga':'raio','magico':'gelo','caos':'pedra','ultimate':'ultimate'}
+# FinalBosses: Arauto do Caos usa 'agua' em vez de 'gelo'
+_PAT_ELEM_FINAL = {'fogo':'fogo','carga':'raio','magico':'agua','caos':'pedra','ultimate':'ultimate'}
+
 class Boss:
     def __init__(self,idx):
         d=DADOS_BOSS[idx]; self.idx=idx; self.nome=d["nome"]
@@ -788,6 +974,7 @@ class Boss:
         self.vel=d["vel"]; self.pat=d["pat"]; self.dir=False
         self.kb=0.0; self.tatq=90; self.fatq=0; self.flash=0
         self.fase=1; self.tesp=180
+        self.elem=_PAT_ELEM.get(self.pat,'fogo')
 
     def hit(self,d,atk=None):
         self.vida=max(0,self.vida-d); self.flash=4
@@ -802,7 +989,8 @@ class Boss:
             self.kb=0.0
             if personagem:
                 dx=personagem.rect.centerx-self.rect.centerx
-                if abs(dx)>5: self.rect.x+=v if dx>0 else -v; self.dir=dx>0
+                stop=self.rect.width//2+personagem.rect.width//2+10
+                if abs(dx)>stop: self.rect.x+=v if dx>0 else -v; self.dir=dx>0
         self.rect.x=max(-self.rect.width,min(LARGURA_TELA,self.rect.x))
         if self.tatq>0: self.tatq-=1
         if self.fatq>0: self.fatq-=1
@@ -817,14 +1005,44 @@ class Boss:
             self.tesp=max(90,240-self.fase*50); self._esp()
 
     def _esp(self):
-        if not(projeteis_g and personagem): return
-        cores={"fogo":(255,80,0),"magico":(180,0,255),"caos":(255,255,0),"ultimate":(0,255,255)}
-        n={"fogo":1,"carga":0,"magico":2,"caos":3,"ultimate":4}.get(self.pat,1)
-        cor=cores.get(self.pat,LARAN)
-        if self.pat=="carga": self.kb=-20*(1 if self.dir else -1); return
-        dx=personagem.rect.centerx-self.rect.centerx; dr=1 if dx>0 else -1
-        for i in range(n):
-            projeteis_g.add(Proj(self.rect.centerx,self.rect.centery-i*22,dr,self.dano//2,cor))
+        if personagem is None: return
+        ax=personagem.rect.centerx; ay=personagem.rect.centery
+        x=self.rect.centerx; y=self.rect.centery-10
+        e=self.elem; f=self.fase; d=int(self.dano*1.6)
+        if e=='fogo':
+            n=1 if f==1 else(3 if f==2 else 5)
+            spr=0 if n==1 else 28
+            for i in range(n):
+                off=int((i-(n-1)/2)*spr)
+                projeteis_g.add(BossProj(x,y,ax+off,ay,e,d))
+        elif e=='raio':
+            n=3 if f==1 else(5 if f==2 else 7)
+            for i in range(n):
+                off=int((i-(n-1)/2)*32)
+                projeteis_g.add(BossProj(x,y,ax+off,ay,e,d))
+        elif e=='gelo':
+            n=3 if f==1 else(5 if f==2 else 7)
+            for i in range(n):
+                off=int((i-(n-1)/2)*30)
+                projeteis_g.add(BossProj(x,y,ax+off,ay,e,d))
+        elif e=='agua':
+            n=2 if f==1 else(4 if f==2 else 6)
+            for i in range(n):
+                off=int((i-(n-1)/2)*36)
+                projeteis_g.add(BossProj(x,y,ax+off,ay,e,d))
+        elif e=='pedra':
+            n=1 if f==1 else(2 if f==2 else 3)
+            for i in range(n):
+                off=int((i-(n-1)/2)*42)
+                projeteis_g.add(BossProj(x,y,ax+off,ay,e,d))
+        else:  # ultimate — um de cada elemento
+            elems=['fogo','raio','gelo','agua','pedra']
+            for i,el in enumerate(elems):
+                off=int((i-2)*32)
+                projeteis_g.add(BossProj(x,y,ax+off,ay,el,d))
+            if f==3:  # fase final: segunda salva centralizada
+                for el in ['raio','gelo']:
+                    projeteis_g.add(BossProj(x,y,ax,ay,el,d))
 
     def draw_hp(self,s):
         w=300; h=18; x=LARGURA_TELA//2-w//2; y=ALTURA_TELA-42
@@ -848,6 +1066,7 @@ class FinalBoss(Boss):
         self.vel = d["vel"]; self.pat = d["pat"]; self.dir = False
         self.kb = 0.0; self.tatq = 90; self.fatq = 0; self.flash = 0
         self.fase = 1; self.tesp = 180
+        self.elem = _PAT_ELEM_FINAL.get(self.pat, 'fogo')
 
 # ═══════════════════════════════════════════════════════════════
 #  ITEM
@@ -866,10 +1085,30 @@ class Item(pygame.sprite.Sprite):
             if ig:
                 for e in list(ig): e.hit(40); add_parts(e.rect.centerx,e.rect.centery,LARAN,12)
             add_tf(p.rect.centerx,p.rect.top,"BOMBA!",LARAN,34); _play(som_bomb)
+        elif self.sub=='mp10':
+            p.mp=min(p.VMAX_MP,p.mp+10)
+            add_tf(p.rect.centerx,p.rect.top,"+10 MP",(100,200,255),28)
+        elif self.sub=='mp20':
+            p.mp=min(p.VMAX_MP,p.mp+20)
+            add_tf(p.rect.centerx,p.rect.top,"+20 MP",(80,140,255),28)
+        elif self.sub=='mp50':
+            p.mp=min(p.VMAX_MP,p.mp+50)
+            add_tf(p.rect.centerx,p.rect.top,"+50 MP",(180,80,255),30)
+        elif self.sub=='mpfull':
+            p.mp=p.VMAX_MP
+            add_tf(p.rect.centerx,p.rect.top,"MP CHEIO!",(255,220,0),34)
 
 def mk_item(x=None,sub=None):
     if x is None: x=random.randint(10,LARGURA_TELA-42)
-    if sub is None: r=random.random(); sub='pocao' if r<.6 else('bota' if r<.85 else'bomba')
+    if sub is None:
+        r=random.random()
+        if r<.48:   sub='pocao'
+        elif r<.70: sub='bota'
+        elif r<.78: sub='bomba'
+        elif r<.90: sub='mp10'
+        elif r<.97: sub='mp20'
+        elif r<.99: sub='mp50'
+        else:       sub='mpfull'
     return Item(x,sub)
 
 # ═══════════════════════════════════════════════════════════════
@@ -914,6 +1153,13 @@ def hud(p,vidas,pts,onda,boss=None):
     pygame.draw.rect(tela,bc,(10,10,int(larg*prop),alt))
     ht=FI.render(f"HP {p.vida}/{p.VMAX}",True,BRANCO)
     tela.blit(ht,(10+larg//2-ht.get_width()//2,12))
+    mp_prop=max(0.0,p.mp/p.VMAX_MP)
+    mp_cor=(50,120,255) if mp_prop>0.25 else (100,60,180)
+    pygame.draw.rect(tela,CINZA,(9,34,larg+2,14))
+    pygame.draw.rect(tela,(20,20,80),(10,35,larg,12))
+    pygame.draw.rect(tela,mp_cor,(10,35,int(larg*mp_prop),12))
+    mt=FI.render(f"MP {p.mp}/{p.VMAX_MP}",True,BRANCO)
+    tela.blit(mt,(10+larg//2-mt.get_width()//2,35))
     for i in range(vidas):
         pygame.draw.circle(tela,VERM,(230+i*22,18),7)
         pygame.draw.circle(tela,ROSA,(227+i*22,15),4)
@@ -932,7 +1178,7 @@ def hud(p,vidas,pts,onda,boss=None):
 def tela_sel():
     sel=0
     while True:
-        tela.blit(FUNDOS[0],(0,0))
+        tela.blit(FUNDOS[0],(-(BG_W-LARGURA_TELA)//2,0))
         ov=pygame.Surface((LARGURA_TELA,ALTURA_TELA),pygame.SRCALPHA); ov.fill((0,0,0,160)); tela.blit(ov,(0,0))
         txt(tela,"FÚRIA DAS MASMORRAS",FP,(180,120,15),LARGURA_TELA//2,30)
         txt(tela,"ESCOLHA SEU PERSONAGEM",FM,AMAR,LARGURA_TELA//2,68)
@@ -1087,18 +1333,19 @@ def menu_ini():
         tela.blit(tag, tag.get_rect(center=(LARGURA_TELA//2, 238)))
 
         # ── PAINEL DO MENU ───────────────────────────────────────
-        pan = pygame.Surface((440,190),pygame.SRCALPHA)
+        pan = pygame.Surface((440,215),pygame.SRCALPHA)
         pan.fill((0,0,0,185))
         tela.blit(pan,(180,358))
-        pygame.draw.rect(tela,(120,80,14),(180,358,440,190),2)
+        pygame.draw.rect(tela,(120,80,14),(180,358,440,215),2)
 
         txt(tela,"ESPAÇO  —  Iniciar Aventura",FM,BRANCO,LARGURA_TELA//2,400)
-        txt(tela,"R  —  Recordes",FP,(180,180,160),LARGURA_TELA//2,445)
-        txt(tela,"Q  —  Sair",FP,(180,180,160),LARGURA_TELA//2,480)
-        txt(tela,"ESC  Pausar   E  Poder Especial",FI,(90,90,80),LARGURA_TELA//2,520)
+        txt(tela,"R  —  Recordes",FP,(180,180,160),LARGURA_TELA//2,442)
+        txt(tela,"Q  —  Sair",FP,(180,180,160),LARGURA_TELA//2,476)
+        txt(tela,"CTRL  Poder Especial       ALT  Bloquear",FI,(90,90,80),LARGURA_TELA//2,510)
+        txt(tela,"ESC  Pausar",FI,(90,90,80),LARGURA_TELA//2,535)
 
         # Rodapé de controles
-        txt(tela,"← →  Mover     ↑  Pular     ESPAÇO  Atacar",FI,(70,70,65),LARGURA_TELA//2,ALTURA_TELA-28)
+        txt(tela,"← →  Mover    ↑  Pular    ESPAÇO  Atacar    ALT  Bloquear",FI,(70,70,65),LARGURA_TELA//2,ALTURA_TELA-28)
         # Crédito do desenvolvedor
         dev_f = pygame.font.Font(None,24)
         dev_t = dev_f.render("Desenvolvido Por  Leandro Oliveira Moraes", True, (180,135,35))
@@ -1195,6 +1442,7 @@ def main():
         PTS=0; vidas=3; onda=1; mortos=0; lim=5; MAX=1
         cen=0; boss=None; boss_wave=False
         vitoria_flag=False; vitoria_result=False
+        bg_scroll=0.0
         inimigos_g=pygame.sprite.Group()
         itens_g=pygame.sprite.Group()
         projeteis_g=pygame.sprite.Group()
@@ -1228,7 +1476,7 @@ def main():
                                                 for _ in range(2):
                                                     m=Inimigo(15); m.rect.center=a.rect.center
                                                     m.vel=6; m.vida=m.vmax=8; inimigos_g.add(m)
-                                            if random.random()<.25: itens_g.add(mk_item(a.rect.centerx))
+                                            if random.random()<.12 and len(itens_g)<6: itens_g.add(mk_item(a.rect.centerx))
                                             PTS+=10+personagem.combo*2; mortos+=1
                                             add_parts(a.rect.centerx,a.rect.centery,AMAR,10); a.kill()
                                     else:
@@ -1245,35 +1493,39 @@ def main():
                                             PTS+=200; itens_g.add(mk_item(boss.rect.centerx))
                                             add_tf(boss.rect.centerx,boss.rect.top-30,"BOSS DERROTADO!",DOURO,36)
                                             add_parts(boss.rect.centerx,boss.rect.centery,DOURO,20); boss=None; tocar_cenario(cen)
-                    elif ev.key==pygame.K_e:
-                        personagem.iniciar_atq(True)
-                        alvos=list(inimigos_g)+(([boss]) if boss else [])
-                        for a in alvos:
-                            ok,d=personagem.atacar_esp(a)
-                            if ok:
-                                add_tf(a.rect.centerx,a.rect.top-10,f"-{d}!",CIANO,32)
-                                if a.vida<=0:
-                                    if isinstance(a,Inimigo):
-                                        if a.comp=='morto_vivo' and not a.revived:
-                                            a.revived=True; a.vida=a.vmax//2
-                                            ri=a.image.copy(); ri.fill((160,220,160),special_flags=pygame.BLEND_RGB_MULT); a.image=ri
+                    elif ev.key==pygame.K_LCTRL:
+                        if personagem.mp<10:
+                            add_tf(personagem.rect.centerx,personagem.rect.top,"SEM MP!",CIANO,30)
+                        else:
+                            personagem.mp-=10
+                            personagem.iniciar_atq(True)
+                            alvos=list(inimigos_g)+(([boss]) if boss else [])
+                            for a in alvos:
+                                ok,d=personagem.atacar_esp(a)
+                                if ok:
+                                    add_tf(a.rect.centerx,a.rect.top-10,f"-{d}!",CIANO,32)
+                                    if a.vida<=0:
+                                        if isinstance(a,Inimigo):
+                                            if a.comp=='morto_vivo' and not a.revived:
+                                                a.revived=True; a.vida=a.vmax//2
+                                                ri=a.image.copy(); ri.fill((160,220,160),special_flags=pygame.BLEND_RGB_MULT); a.image=ri
+                                            else:
+                                                if random.random()<.12 and len(itens_g)<6: itens_g.add(mk_item(a.rect.centerx))
+                                                PTS+=20+personagem.combo*5; mortos+=1
+                                                add_parts(a.rect.centerx,a.rect.centery,CIANO,10); a.kill()
                                         else:
-                                            if random.random()<.25: itens_g.add(mk_item(a.rect.centerx))
-                                            PTS+=20+personagem.combo*5; mortos+=1
-                                            add_parts(a.rect.centerx,a.rect.centery,CIANO,10); a.kill()
-                                    else:
-                                        if isinstance(boss,FinalBoss):
-                                            fi_v=boss.fi; PTS+=500
-                                            itens_g.add(mk_item(boss.rect.centerx))
-                                            add_tf(boss.rect.centerx,boss.rect.top-30,"BOSS FINAL DERROTADO!",DOURO,36)
-                                            add_parts(boss.rect.centerx,boss.rect.centery,DOURO,25); boss=None
-                                            if fi_v==4:
-                                                pygame.mixer.music.stop()
-                                                vitoria_flag=True; vitoria_result=vitoria(); rodando=False
-                                            else: tocar_cenario(5)
-                                        else:
-                                            PTS+=200; itens_g.add(mk_item(boss.rect.centerx))
-                                            add_parts(boss.rect.centerx,boss.rect.centery,DOURO,20); boss=None; tocar_cenario(cen)
+                                            if isinstance(boss,FinalBoss):
+                                                fi_v=boss.fi; PTS+=500
+                                                itens_g.add(mk_item(boss.rect.centerx))
+                                                add_tf(boss.rect.centerx,boss.rect.top-30,"BOSS FINAL DERROTADO!",DOURO,36)
+                                                add_parts(boss.rect.centerx,boss.rect.centery,DOURO,25); boss=None
+                                                if fi_v==4:
+                                                    pygame.mixer.music.stop()
+                                                    vitoria_flag=True; vitoria_result=vitoria(); rodando=False
+                                                else: tocar_cenario(5)
+                                            else:
+                                                PTS+=200; itens_g.add(mk_item(boss.rect.centerx))
+                                                add_parts(boss.rect.centerx,boss.rect.centery,DOURO,20); boss=None; tocar_cenario(cen)
 
             if not rodando: break
             personagem.update()
@@ -1286,7 +1538,8 @@ def main():
                     personagem.dano(p.dano); add_parts(p.rect.centerx,p.rect.centery,LARAN); p.kill()
 
             for it in pygame.sprite.spritecollide(personagem,itens_g,True):
-                it.aplicar(personagem,inimigos_g); PTS+=5; itens_g.add(mk_item())
+                it.aplicar(personagem,inimigos_g); PTS+=5
+                if len(itens_g)<4 and random.random()<.5: itens_g.add(mk_item())
 
             while mortos>=lim:
                 onda+=1; lim+=onda*3; MAX=min(3,1+(onda-1)//2); PTS+=onda*20
@@ -1335,8 +1588,11 @@ def main():
             # ── RENDER ──
             sx=random.randint(-5,5) if shake_f>0 else 0
             sy=random.randint(-5,5) if shake_f>0 else 0
+            # parallax: fundo desloca suavemente com a posição do personagem
+            bg_target=-(personagem.rect.centerx/LARGURA_TELA)*(BG_W-LARGURA_TELA)
+            bg_scroll+=(bg_target-bg_scroll)*0.05
             tela.fill(PRETO)
-            tela.blit(FUNDOS[cen],(sx,sy))
+            tela.blit(FUNDOS[cen],(int(bg_scroll)+sx,sy))
 
             for it in itens_g: tela.blit(it.image,(it.rect.x+sx,it.rect.y+sy))
 
@@ -1345,8 +1601,8 @@ def main():
                 if e.flash>0:
                     fl=img.copy(); fl.fill((200,200,200),special_flags=pygame.BLEND_RGB_ADD); img=fl
                 if e.fatq>0:
-                    lx=20 if e.dir else -20; w,h=img.get_width(),img.get_height()
-                    ia=pygame.transform.scale(img,(int(w*1.12),int(h*1.12)))
+                    lx=28 if e.dir else -28; w,h=img.get_width(),img.get_height()
+                    ia=pygame.transform.scale(img,(int(w*1.45),int(h*1.45)))
                     ra=ia.get_rect(midbottom=(e.rect.centerx+lx+sx,e.rect.bottom+sy)); tela.blit(ia,ra.topleft)
                 else: tela.blit(img,(e.rect.x+sx,e.rect.y+sy))
                 if e.comp=='fantasma' and e.inv_fant:
@@ -1360,8 +1616,8 @@ def main():
                 if boss.flash>0:
                     fl=bi2.copy(); fl.fill((200,200,200),special_flags=pygame.BLEND_RGB_ADD); bi2=fl
                 if boss.fatq>0:
-                    lx=25 if boss.dir else -25; w,h=bi2.get_width(),bi2.get_height()
-                    ba=pygame.transform.scale(bi2,(int(w*1.15),int(h*1.15)))
+                    lx=35 if boss.dir else -35; w,h=bi2.get_width(),bi2.get_height()
+                    ba=pygame.transform.scale(bi2,(int(w*1.5),int(h*1.5)))
                     rb=ba.get_rect(midbottom=(boss.rect.centerx+lx+sx,boss.rect.bottom+sy)); tela.blit(ba,rb.topleft)
                 else: tela.blit(bi2,(boss.rect.x+sx,boss.rect.y+sy))
 
