@@ -1,5 +1,7 @@
 # Fúria das Masmorras
 
+![Tela inicial](capa.png)
+
 Beat 'em up 2D de ação e sobrevivência construído do zero com Python e pygame. Enfrente ondas crescentes de inimigos, derrote bosses épicos e chegue o mais longe possível — cada partida é um desafio novo.
 
 ---
