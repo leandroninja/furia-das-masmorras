@@ -90,6 +90,15 @@ def _sp_ladino():
     except:
         s = _ns(64,80); _hum(s,(40,38,48),(155,125,95)); return s
 
+def _sp_velhobarbudo():
+    """Sprite procedural de fallback para o Velho Barbudo."""
+    s = _ns(64,80); _hum(s,(80,68,100),(200,185,165))
+    # barba branca
+    pygame.draw.ellipse(s,(230,230,230),(20,34,24,20))
+    # chapéu pontudo
+    pygame.draw.polygon(s,(55,40,90),[(32,2),(18,26),(46,26)])
+    return s
+
 def _sp_ini_base(tipo):
     """Sprites fallback para inimigos 1-12 (caso PNG não exista)."""
     paletas = [
@@ -261,6 +270,45 @@ def _img(path, fb=None):
     try: return pygame.image.load(path).convert_alpha()
     except: return fb() if fb else _ns(48,60)
 
+def _load_gif(path):
+    """Carrega todos os frames de um GIF animado via Pillow.
+    Retorna (lista_de_frames, primeira_surface) ou (None, None) se falhar."""
+    try:
+        from PIL import Image
+        gif = Image.open(path)
+        frames = []
+        try:
+            while True:
+                dur = max(gif.info.get('duration', 100), 50)
+                rgba = gif.convert('RGBA')
+                w, h = rgba.size
+                surf = pygame.image.fromstring(rgba.tobytes(), (w, h), 'RGBA').convert_alpha()
+                frames.append((surf, dur))
+                gif.seek(gif.tell() + 1)
+        except EOFError:
+            pass
+        if frames:
+            return frames, frames[0][0]
+    except Exception:
+        pass
+    return None, None
+
+class GifAnim:
+    """Controla a animação de um GIF quadro a quadro."""
+    def __init__(self, frames):
+        self.frames = frames          # [(surface, duration_ms), ...]
+        self.total_ms = sum(d for _, d in frames)
+        self._ms = 0
+    def tick(self, dt=16):
+        self._ms = (self._ms + dt) % self.total_ms
+    def current(self):
+        t = 0
+        for surf, dur in self.frames:
+            t += dur
+            if self._ms < t:
+                return surf
+        return self.frames[-1][0]
+
 def _som(path):
     try: return pygame.mixer.Sound(path)
     except: return None
@@ -326,15 +374,39 @@ def _musica(lista, fallback="musica_fundo.mp3"):
 
 def _imgsc(path, size, fb):
     t = _img(path); return pygame.transform.scale(t, size) if t else fb()
-_img_mago   = _imgsc("mago.png",   (76,118), _sp_mago)
-_img_ladino = _imgsc("ladino.png", (76,118), _sp_ladino)
-imgs_char = [_img("personagem.png",_sp_guerreiro), _img_mago, _img_ladino]
+_img_mago   = _imgsc("mago.png",         (76,118), _sp_mago)
+_img_ladino = _imgsc("ladino.png",       (76,118), _sp_ladino)
+_img_velho  = _imgsc("velhobarbudo.png", (76,118), _sp_velhobarbudo)
+imgs_char = [_img("personagem.png", _sp_guerreiro), _img_mago, _img_ladino, _img_velho]
 def _ini_fn(i): return "inimigo.png" if i==1 else f"inimigo{i}.png"
-imgs_ini  = [_img(_ini_fn(i), lambda i=i:_sp_ini_base(i)) for i in range(1,13)] + [_img(f"inimigo{i}.png", lambda i=i:_sp_ini_novo(i)) for i in range(13,23)]
-imgs_boss = [_img(f"boss{i+1}.png", lambda i=i:_sp_boss(i)) for i in range(5)]
-machado    = _img("machado.png")
-cajado_img = _imgsc("cajado.png",(36,57), lambda: machado)
-espada_img = _imgsc("espada.png",(34,58), lambda: machado)
+_gif_map      = {}  # idx -> GifAnim  (imgs_ini animados)
+_gif_boss_map = {}  # idx -> GifAnim  (imgs_boss animados)
+_gif_fboss_map= {}  # fi  -> GifAnim  (fboss_imgs animados)
+
+def _ini_img(i, fb):
+    idx = i - 1
+    fn = "inimigo.gif" if i == 1 else f"inimigo{i}.gif"
+    frames, first = _load_gif(fn)
+    if frames:
+        _gif_map[idx] = GifAnim(frames)
+        return first
+    return _img(_ini_fn(i), fb)
+
+imgs_ini  = [_ini_img(i, lambda i=i:_sp_ini_base(i)) for i in range(1,13)] + \
+            [_ini_img(i, lambda i=i:_sp_ini_novo(i)) for i in range(13,64)]
+
+def _boss_img(i):
+    frames, first = _load_gif(f"boss{i+1}.gif")
+    if frames:
+        _gif_boss_map[i] = GifAnim(frames)
+        return first
+    return _img(f"boss{i+1}.png", lambda i=i:_sp_boss(i))
+
+imgs_boss = [_boss_img(i) for i in range(5)]
+machado       = _img("machado.png")
+cajado_img    = _imgsc("cajado.png",      (36,57), lambda: machado)
+espada_img    = _imgsc("espada.png",      (34,58), lambda: machado)
+machadobarba  = _imgsc("machadobarba.png", (36,57), lambda: machado)
 imgs_item = {"pocao":_img("item.png",_sp_pocao), "bota":_img("item_bota.png",_sp_bota), "bomba":_img("item_bomba.png",_sp_bomba),
              "mp10":_sp_mp10(), "mp20":_sp_mp20(), "mp50":_sp_mp50(), "mpfull":_sp_mpfull()}
 
@@ -352,14 +424,40 @@ off_ini   = [_trans_bottom(img) for img in imgs_ini]
 off_boss  = [_trans_bottom(img) for img in imgs_boss]
 off_item_d= {k: _trans_bottom(v) for k, v in imgs_item.items()}
 
-fboss_imgs = [
-    _imgsc("inimigo13.png",   (140,115), lambda: _sp_boss(0)),
-    _imgsc("inimigo14.png",   (140,115), lambda: _sp_boss(1)),
-    _imgsc("inimigo15.png",   (140,108), lambda: _sp_boss(2)),
-    _imgsc("inimigo16.png",   (200,155), lambda: _sp_boss(3)),
-    _imgsc("inimigofinal.png",(160,130), lambda: _sp_boss(4)),
+_FBOSS_CFG = [
+    ("inimigo13",   (140,115), lambda: _sp_boss(0)),
+    ("inimigo14",   (140,115), lambda: _sp_boss(1)),
+    ("inimigo15",   (140,108), lambda: _sp_boss(2)),
+    ("inimigo16",   (200,155), lambda: _sp_boss(3)),
+    ("inimigofinal",(160,130), lambda: _sp_boss(4)),
 ]
+def _fboss_img(fi, name, size, fb):
+    frames, first = _load_gif(f"{name}.gif")
+    if frames:
+        scaled = [(pygame.transform.scale(s, size), d) for s, d in frames]
+        _gif_fboss_map[fi] = GifAnim(scaled)
+        return scaled[0][0]
+    return _imgsc(f"{name}.png", size, fb)
+fboss_imgs = [_fboss_img(fi, name, size, fb) for fi,(name,size,fb) in enumerate(_FBOSS_CFG)]
 off_fboss = [_trans_bottom(img) for img in fboss_imgs]
+
+_gif_extra_boss_map = {}
+_EXTRA_BOSS_CFG = [
+    ("bossfinal1",(180,155),lambda:_sp_boss(0)),
+    ("bossfinal2",(185,160),lambda:_sp_boss(1)),
+    ("bossfinal3",(195,165),lambda:_sp_boss(2)),
+    ("bossfinal4",(205,175),lambda:_sp_boss(3)),
+    ("bossfinal5",(215,185),lambda:_sp_boss(4)),
+]
+def _extra_boss_img(fi, name, size, fb):
+    frames, first = _load_gif(f"{name}.gif")
+    if frames:
+        scaled = [(pygame.transform.scale(s, size), d) for s, d in frames]
+        _gif_extra_boss_map[fi] = GifAnim(scaled)
+        return scaled[0][0]
+    return _imgsc(f"{name}.png", size, fb)
+extra_boss_imgs = [_extra_boss_img(fi,name,size,fb) for fi,(name,size,fb) in enumerate(_EXTRA_BOSS_CFG)]
+off_extra_boss  = [_trans_bottom(img) for img in extra_boss_imgs]
 
 som_atq  = _som("ataque.wav");   som_col  = _som("colisao.wav")
 som_pulo = _som("pulo.wav");     som_colt = _som("coleta.wav")
@@ -465,17 +563,34 @@ DADOS_INI = [
     # tipos 1-12: vida x2
     (3,6,40,5),(5,8,60,10),(4,7,50,7),(6,9,70,12),(3,5,80,8),(7,10,30,3),
     (2,4,100,15),(5,7,40,6),(4,6,60,9),(6,8,50,7),(3,5,70,10),(8,10,20,2),
-    # tipos 13-16: vida x3 | tipos 17-22: inalterados
+    # tipos 13-22
     (2,4,75,8),(4,5,90,10),(3,5,54,5),(4,7,66,6),(3,6,20,8),
     (1,3,80,18),(2,4,28,4),(6,9,15,7),(3,6,35,9),(3,5,30,8),
+    # tipos 23-32: tier 3
+    (4,7,120,15),(5,9,140,18),(3,6,110,16),(6,9,160,20),(4,7,150,17),
+    (7,10,90,12),(3,5,180,22),(5,8,130,16),(4,7,155,19),(6,9,145,18),
+    # tipos 33-42: tier 4
+    (4,8,200,24),(6,9,220,28),(5,8,195,26),(7,10,250,30),(4,6,230,27),
+    (8,11,115,14),(3,5,265,36),(6,8,175,21),(5,7,210,25),(7,9,190,23),
+    # tipos 43-52: tier 5
+    (5,8,300,34),(7,10,330,38),(6,9,285,32),(8,11,360,42),(5,7,340,36),
+    (9,12,140,16),(4,6,380,48),(7,9,250,28),(6,8,315,35),(8,10,280,31),
+    # tipos 53-63: tier 6
+    (6,9,420,46),(8,11,460,52),(7,10,440,49),(9,12,490,55),(6,8,450,50),
+    (10,13,160,18),(5,7,510,60),(8,10,380,42),(7,9,470,52),(9,11,430,47),
+    (6,9,530,58),
 ]
+_COMP_EXTRA = ['atirador','carregador','berseker','fantasma','assassino',
+               'gigante','curandeiro','bloqueador','morto_vivo','dividido']
 COMPORT = {13:'atirador',14:'carregador',15:'dividido',16:'fantasma',17:'berseker',
            18:'gigante',19:'curandeiro',20:'assassino',21:'bloqueador',22:'morto_vivo'}
+COMPORT.update({23+i: _COMP_EXTRA[i % len(_COMP_EXTRA)] for i in range(41)})
 
 DADOS_CHAR = [
-    {"nome":"Guerreiro","sub":"Equilibrado",      "vida":100,"vel":5,"dano":10,"esp":30,"alc":70, "dcd":40,"cor":DOURO},
-    {"nome":"Mago",     "sub":"Alto dano/low HP", "vida":70, "vel":4,"dano":20,"esp":60,"alc":130,"dcd":50,"cor":AZUL},
-    {"nome":"Ladino",   "sub":"Rápido e ágil",    "vida":80, "vel":8,"dano":8, "esp":20,"alc":55, "dcd":25,"cor":CINZA},
+    {"nome":"Guerreiro",    "sub":"Equilibrado",       "vida":100,"vel":5,"dano":10,"esp":30,"alc":70, "dcd":40,"cor":DOURO},
+    {"nome":"Mago",         "sub":"Alto dano/low HP",  "vida":70, "vel":4,"dano":20,"esp":60,"alc":130,"dcd":50,"cor":AZUL},
+    {"nome":"Ladino",       "sub":"Rápido e ágil",     "vida":80, "vel":8,"dano":8, "esp":20,"alc":55, "dcd":25,"cor":CINZA},
+    {"nome":"Velho Barbudo","sub":"Ancião das runas",  "vida":75, "vel":3,"dano":28,"esp":70,"alc":145,"dcd":55,"cor":BRANCO},
 ]
 DADOS_BOSS = [
     {"nome":"Dragão",           "vida":800, "dano":20,"vel":3,"pat":"fogo"},
@@ -490,6 +605,14 @@ DADOS_FBOSS = [
     {"nome":"Arauto do Caos",       "vida":1600,"dano":25,"vel":3,"pat":"magico"},
     {"nome":"Protetor Amaldiçoado", "vida":1800,"dano":32,"vel":4,"pat":"caos"},
     {"nome":"O INIMIGO FINAL",      "vida":4800,"dano":40,"vel":5,"pat":"ultimate"},
+]
+# vida dobra a cada fase: 4800*2, *4, *8, *16, *32
+DADOS_BOSSFINAL_EXTRA = [
+    {"nome":"A SOMBRA ETERNA",   "vida":9600,  "dano":50,"vel":4,"pat":"fogo"},
+    {"nome":"O DEVORADOR",       "vida":19200, "dano":60,"vel":5,"pat":"carga"},
+    {"nome":"SENHOR DO ABISMO",  "vida":38400, "dano":70,"vel":5,"pat":"magico"},
+    {"nome":"O DESTRUIDOR",      "vida":76800, "dano":80,"vel":6,"pat":"caos"},
+    {"nome":"A ENTIDADE FINAL",  "vida":153600,"dano":95,"vel":6,"pat":"ultimate"},
 ]
 
 # ═══════════════════════════════════════════════════════════════
@@ -757,13 +880,20 @@ class Personagem(pygame.sprite.Sprite):
                             gs=_ns(gr*2+2,gr*2+2)
                             pygame.draw.circle(gs,gcor+(ga,),(gr,gr),gr)
                             s.blit(gs,(fcx-gr,fcy-gr))
-                else:  # Ladino — 5 espadas girando em órbita circular
+                elif self.ti==2:  # Ladino — 5 espadas girando em órbita circular
                     for i in range(5):
                         a=math.radians(self.ang*4+i*72)
                         ox=int(math.cos(a)*R); oy=int(math.sin(a)*R)
                         me=pygame.transform.rotozoom(espada_img,-(self.ang*4+i*72)+90,1.4)
                         r=me.get_rect(center=(cx+ox,cy+oy))
                         s.blit(me,r.topleft)
+                else:  # Velho Barbudo — 3 machadobarba girando em órbita
+                    for i in range(3):
+                        a=math.radians(self.ang*3+i*120)
+                        ox=int(math.cos(a)*R); oy=int(math.sin(a)*R)
+                        mr=pygame.transform.rotozoom(machadobarba,-(self.ang*3+i*120)+90,1.5)
+                        r=mr.get_rect(center=(cx+ox,cy+oy))
+                        s.blit(mr,r.topleft)
             else:
                 lado=1 if self.dir else -1
                 if self.ti==0:  # Guerreiro — machado giratório
@@ -783,13 +913,18 @@ class Personagem(pygame.sprite.Sprite):
                         gs=_ns(gr*2+2,gr*2+2)
                         pygame.draw.circle(gs,gcor+(ga,),(gr,gr),gr)
                         s.blit(gs,(gx-gr,gy-gr))
-                else:  # Ladino — espada com slash em arco
+                elif self.ti==2:  # Ladino — espada com slash em arco
                     slash_t=(15-self.fatq)/15
                     ang_esp=int((65-130*slash_t)*lado)
                     me=pygame.transform.rotozoom(espada_img,ang_esp,1.8)
                     r=me.get_rect(center=self.rect.center)
                     r.x+=55*lado; r.y-=8
                     s.blit(me,r.topleft)
+                else:  # Velho Barbudo — machadobarba giratório
+                    mr=pygame.transform.rotozoom(machadobarba,self.ang,1.8)
+                    r=mr.get_rect(center=self.rect.center)
+                    r.x+=65*lado
+                    s.blit(mr,r.topleft)
 
         # ── BLOQUEIO ──
         if self.bloq:
@@ -800,9 +935,12 @@ class Personagem(pygame.sprite.Sprite):
             elif self.ti==0:  # Guerreiro: machado horizontal de defesa
                 bx=self.rect.centerx+lado*58; by=self.rect.centery-10
                 bimg=pygame.transform.rotozoom(machado,55*lado,3.2)
-            else:              # Ladino: espada diagonal de defesa
+            elif self.ti==2:   # Ladino: espada diagonal de defesa
                 bx=self.rect.centerx+lado*56; by=self.rect.centery-12
                 bimg=pygame.transform.rotozoom(espada_img,50*lado,3.2)
+            else:              # Velho Barbudo: machadobarba horizontal de defesa
+                bx=self.rect.centerx+lado*58; by=self.rect.centery-10
+                bimg=pygame.transform.rotozoom(machadobarba,55*lado,3.2)
             if not self.dir: bimg=pygame.transform.flip(bimg,True,False)
             br=bimg.get_rect(center=(bx,by)); s.blit(bimg,br.topleft)
             # brilho pulsante ao redor da arma
@@ -835,6 +973,7 @@ class Inimigo(pygame.sprite.Sprite):
         super().__init__()
         self.tipo=tipo; idx=tipo-1
         vm,vx,vb,db=DADOS_INI[idx]; self.image=imgs_ini[idx]; self.rect=self.image.get_rect()
+        self.gif=_gif_map.get(idx)  # GifAnim se for inimigo animado, None caso contrário
         bv=int((dif-1)*2)
         self.vel=random.randint(vm+bv,vx+bv); self.vida=int(vb*dif)
         self.vmax=self.vida; self.dano=max(1,int(db*dif))
@@ -868,6 +1007,7 @@ class Inimigo(pygame.sprite.Sprite):
 
     def update(self):
         global inimigos_g, projeteis_g
+        if self.gif: self.gif.tick(); self.image=self.gif.current()
         if abs(self.kb)>.5: self.rect.x+=int(self.kb); self.kb*=.65
         else:
             self.kb=0.0; self._mover()
@@ -969,6 +1109,7 @@ class Boss:
     def __init__(self,idx):
         d=DADOS_BOSS[idx]; self.idx=idx; self.nome=d["nome"]
         self.image=imgs_boss[idx]; self.rect=self.image.get_rect()
+        self.gif=_gif_boss_map.get(idx)
         self.rect.midbottom=(LARGURA_TELA+80, CHAO_Y+off_boss[idx])
         self.vida=d["vida"]; self.vmax=d["vida"]; self.dano=d["dano"]
         self.vel=d["vel"]; self.pat=d["pat"]; self.dir=False
@@ -981,6 +1122,7 @@ class Boss:
         dr=1 if(atk and atk.rect.centerx<self.rect.centerx)else -1; self.kb=float(dr*8)
 
     def update(self):
+        if self.gif: self.gif.tick(); self.image=self.gif.current()
         prop=self.vida/self.vmax
         self.fase=3 if prop<.30 else(2 if prop<.60 else 1)
         v=self.vel+(self.fase-1)
@@ -1061,7 +1203,22 @@ class FinalBoss(Boss):
         d = DADOS_FBOSS[fi]; self.fi = fi
         self.idx = fi; self.nome = d["nome"]
         self.image = fboss_imgs[fi]; self.rect = self.image.get_rect()
+        self.gif = _gif_fboss_map.get(fi)
         self.rect.midbottom = (LARGURA_TELA+80, CHAO_Y+off_fboss[fi])
+        self.vida = d["vida"]; self.vmax = d["vida"]; self.dano = d["dano"]
+        self.vel = d["vel"]; self.pat = d["pat"]; self.dir = False
+        self.kb = 0.0; self.tatq = 90; self.fatq = 0; self.flash = 0
+        self.fase = 1; self.tesp = 180
+        self.elem = _PAT_ELEM_FINAL.get(self.pat, 'fogo')
+
+class BossFinalExtra(Boss):
+    """Cadeia de 5 bosses que aparece após derrotar O INIMIGO FINAL."""
+    def __init__(self, fi):
+        d = DADOS_BOSSFINAL_EXTRA[fi]; self.fi = fi
+        self.idx = fi; self.nome = d["nome"]
+        self.image = extra_boss_imgs[fi]; self.rect = self.image.get_rect()
+        self.gif = _gif_extra_boss_map.get(fi)
+        self.rect.midbottom = (LARGURA_TELA+80, CHAO_Y+off_extra_boss[fi])
         self.vida = d["vida"]; self.vmax = d["vida"]; self.dano = d["dano"]
         self.vel = d["vel"]; self.pat = d["pat"]; self.dir = False
         self.kb = 0.0; self.tatq = 90; self.fatq = 0; self.flash = 0
@@ -1182,9 +1339,9 @@ def tela_sel():
         ov=pygame.Surface((LARGURA_TELA,ALTURA_TELA),pygame.SRCALPHA); ov.fill((0,0,0,160)); tela.blit(ov,(0,0))
         txt(tela,"FÚRIA DAS MASMORRAS",FP,(180,120,15),LARGURA_TELA//2,30)
         txt(tela,"ESCOLHA SEU PERSONAGEM",FM,AMAR,LARGURA_TELA//2,68)
-        cw,sx=200,(LARGURA_TELA-200*3-40*2)//2
+        cw,sx=160,(LARGURA_TELA-160*4-20*3)//2
         for i,d in enumerate(DADOS_CHAR):
-            cx=sx+i*(cw+40); cy=110; sel_e=(i==sel)
+            cx=sx+i*(cw+20); cy=110; sel_e=(i==sel)
             cs=pygame.Surface((cw,300),pygame.SRCALPHA); cs.fill((0,0,0,180)); tela.blit(cs,(cx,cy))
             pygame.draw.rect(tela,d["cor"] if sel_e else CINZA,(cx,cy,cw,300),3 if sel_e else 1)
             img=imgs_char[i]; tela.blit(img,img.get_rect(centerx=cx+cw//2,top=cy+15))
@@ -1197,8 +1354,8 @@ def tela_sel():
         for ev in pygame.event.get():
             if ev.type==pygame.QUIT: pygame.quit(); sys.exit()
             if ev.type==pygame.KEYDOWN:
-                if ev.key==pygame.K_LEFT: sel=(sel-1)%3
-                elif ev.key==pygame.K_RIGHT: sel=(sel+1)%3
+                if ev.key==pygame.K_LEFT: sel=(sel-1)%4
+                elif ev.key==pygame.K_RIGHT: sel=(sel+1)%4
                 elif ev.key==pygame.K_SPACE: return sel
                 elif ev.key==pygame.K_q: pygame.quit(); sys.exit()
 
@@ -1441,6 +1598,7 @@ def main():
     while True:
         PTS=0; vidas=3; onda=1; mortos=0; lim=5; MAX=1
         cen=0; boss=None; boss_wave=False
+        extra_boss_phase=-1; item_timer_extra=0
         vitoria_flag=False; vitoria_result=False
         bg_scroll=0.0
         inimigos_g=pygame.sprite.Group()
@@ -1480,14 +1638,27 @@ def main():
                                             PTS+=10+personagem.combo*2; mortos+=1
                                             add_parts(a.rect.centerx,a.rect.centery,AMAR,10); a.kill()
                                     else:
-                                        if isinstance(boss,FinalBoss):
+                                        if isinstance(boss,BossFinalExtra):
+                                            fi_v=boss.fi; PTS+=1000
+                                            itens_g.add(mk_item(boss.rect.centerx)); itens_g.add(mk_item(boss.rect.centerx))
+                                            add_tf(boss.rect.centerx,boss.rect.top-30,f"{boss.nome} ANIQUILADO!",DOURO,36)
+                                            add_parts(boss.rect.centerx,boss.rect.centery,DOURO,30); boss=None
+                                            if fi_v==4:
+                                                pygame.mixer.music.stop()
+                                                vitoria_flag=True; vitoria_result=vitoria(); rodando=False
+                                            else:
+                                                extra_boss_phase=fi_v+1
+                                                boss=BossFinalExtra(extra_boss_phase); tocar_cenario(5,boss=True)
+                                                add_tf(LARGURA_TELA//2,180,f"??? {boss.nome} ???",VERM,48)
+                                        elif isinstance(boss,FinalBoss):
                                             fi_v=boss.fi; PTS+=500
                                             itens_g.add(mk_item(boss.rect.centerx))
                                             add_tf(boss.rect.centerx,boss.rect.top-30,"BOSS FINAL DERROTADO!",DOURO,36)
                                             add_parts(boss.rect.centerx,boss.rect.centery,DOURO,25); boss=None
                                             if fi_v==4:
-                                                pygame.mixer.music.stop()
-                                                vitoria_flag=True; vitoria_result=vitoria(); rodando=False
+                                                extra_boss_phase=0
+                                                boss=BossFinalExtra(0); tocar_cenario(5,boss=True)
+                                                add_tf(LARGURA_TELA//2,180,f"??? {boss.nome} ???",VERM,48)
                                             else: tocar_cenario(5)
                                         else:
                                             PTS+=200; itens_g.add(mk_item(boss.rect.centerx))
@@ -1514,14 +1685,27 @@ def main():
                                                 PTS+=20+personagem.combo*5; mortos+=1
                                                 add_parts(a.rect.centerx,a.rect.centery,CIANO,10); a.kill()
                                         else:
-                                            if isinstance(boss,FinalBoss):
+                                            if isinstance(boss,BossFinalExtra):
+                                                fi_v=boss.fi; PTS+=1000
+                                                itens_g.add(mk_item(boss.rect.centerx)); itens_g.add(mk_item(boss.rect.centerx))
+                                                add_tf(boss.rect.centerx,boss.rect.top-30,f"{boss.nome} ANIQUILADO!",DOURO,36)
+                                                add_parts(boss.rect.centerx,boss.rect.centery,DOURO,30); boss=None
+                                                if fi_v==4:
+                                                    pygame.mixer.music.stop()
+                                                    vitoria_flag=True; vitoria_result=vitoria(); rodando=False
+                                                else:
+                                                    extra_boss_phase=fi_v+1
+                                                    boss=BossFinalExtra(extra_boss_phase); tocar_cenario(5,boss=True)
+                                                    add_tf(LARGURA_TELA//2,180,f"??? {boss.nome} ???",VERM,48)
+                                            elif isinstance(boss,FinalBoss):
                                                 fi_v=boss.fi; PTS+=500
                                                 itens_g.add(mk_item(boss.rect.centerx))
                                                 add_tf(boss.rect.centerx,boss.rect.top-30,"BOSS FINAL DERROTADO!",DOURO,36)
                                                 add_parts(boss.rect.centerx,boss.rect.centery,DOURO,25); boss=None
                                                 if fi_v==4:
-                                                    pygame.mixer.music.stop()
-                                                    vitoria_flag=True; vitoria_result=vitoria(); rodando=False
+                                                    extra_boss_phase=0
+                                                    boss=BossFinalExtra(0); tocar_cenario(5,boss=True)
+                                                    add_tf(LARGURA_TELA//2,180,f"??? {boss.nome} ???",VERM,48)
                                                 else: tocar_cenario(5)
                                             else:
                                                 PTS+=200; itens_g.add(mk_item(boss.rect.centerx))
@@ -1532,6 +1716,13 @@ def main():
             for e in list(inimigos_g): e.update()
             projeteis_g.update()
             if boss: boss.update()
+
+            # Itens HP/MP mais frequentes durante os BossFinalExtra
+            if isinstance(boss,BossFinalExtra) and len(itens_g)<8:
+                item_timer_extra-=1
+                if item_timer_extra<=0:
+                    item_timer_extra=random.randint(100,180)
+                    itens_g.add(mk_item(sub=random.choice(['pocao','pocao','mp10','mp20','mp50'])))
 
             for p in list(projeteis_g):
                 if p.rect.colliderect(personagem.rect):
@@ -1566,7 +1757,7 @@ def main():
                 tspawn-=1
                 if tspawn<=0:
                     dif=1.0+(onda-1)*.25
-                    tp_=random.randint(1,min(22,2+onda*2))
+                    tp_=random.randint(1,min(63,2+onda*2))
                     inimigos_g.add(Inimigo(tp_,dif)); tspawn=max(60,180-onda*15)
 
             if personagem.vida<=0:
