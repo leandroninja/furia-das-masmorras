@@ -32,10 +32,10 @@ Os três heróis olham para ele. Ele os conhece melhor do que ninguém — cada 
 
 ## Rodando o jogo
 
-**Dependência única:** pygame 2.x
+**Dependências:**
 
 ```bash
-pip install pygame
+pip install pygame Pillow
 ```
 
 ```bash
@@ -62,13 +62,14 @@ python "import pygame.py"
 
 ## Personagens
 
-Três estilos de jogo completamente distintos. A escolha muda a estratégia inteira:
+Quatro estilos de jogo completamente distintos. A escolha muda a estratégia inteira:
 
 | Personagem | Estilo | HP | Vel | Dano | Alcance |
 |------------|--------|----|-----|------|---------|
 | **Guerreiro** | Equilibrado — bom em tudo | 100 | 5 | 10 | 70 |
 | **Mago** | Mata rápido, morre rápido | 70 | 4 | 20 | 130 |
 | **Ladino** | Velocidade acima de tudo | 80 | 8 | 8 | 55 |
+| **Velho Barbudo** | Ancião das runas — alto dano, baixa velocidade | 75 | 3 | 28 | 145 |
 
 ### Armas e poderes especiais
 
@@ -79,6 +80,7 @@ Cada personagem tem arma e poder especial únicos:
 | **Guerreiro** | Machado giratório | 5 machados orbitando em volta do personagem |
 | **Mago** | Cajado + orbe mágico pulsante | 6 chamas azuis orbitando em volta do personagem |
 | **Ladino** | Espada em arco de slash | 5 espadas orbitando em volta do personagem |
+| **Velho Barbudo** | Machadobarba giratório | 3 machadobarbas orbitando em volta do personagem |
 
 ### Animação de bloqueio (`ALT`)
 
@@ -89,6 +91,7 @@ Segurar `ALT` ativa a postura de defesa — cada personagem ergue sua arma na fr
 | **Guerreiro** | Machado horizontal — escudo de força bruta |
 | **Mago** | Cajado ereto — barreira mágica |
 | **Ladino** | Espada diagonal — parade rápida |
+| **Velho Barbudo** | Machadobarba horizontal — bloqueio brutal |
 
 ---
 
@@ -130,17 +133,31 @@ Cada boss dispara seu especial periodicamente — projéteis animados que saem d
 
 ### Fase Final
 
-A partir da onda 21 começa a **Fase Final** — o cenário muda e cinco bosses supremos surgem em sequência, um por onda, cada um mais poderoso que o anterior:
+A partir da onda 21 começa a **Fase Final** — o cenário muda para o Núcleo e cinco bosses supremos surgem em sequência, um por onda, cada um mais poderoso que o anterior:
 
 | Boss final | HP | Elemento |
 |------------|----|----------|
-| Hydra das Trevas | 1200 | Fogo |
-| Senhor da Escuridão | 1400 | Raio |
-| Arauto do Caos | 1600 | Água |
-| Protetor Amaldiçoado | 1800 | Pedra |
-| **O Inimigo Final** | **4800** | **Ultimate** |
+| Hydra das Trevas | 1.200 | Fogo |
+| Senhor da Escuridão | 1.400 | Raio |
+| Arauto do Caos | 1.600 | Água |
+| Protetor Amaldiçoado | 1.800 | Pedra |
+| **O Inimigo Final** | **4.800** | **Ultimate** |
 
-Derrotar O Inimigo Final encerra o jogo com a tela de **Vitória** — Yusuki acorda livre.
+### Além do Inimigo Final
+
+Derrotar O Inimigo Final não encerra o jogo — revela a verdade: havia algo ainda mais antigo esperando nas sombras. Uma cadeia de **cinco entidades** surge em sequência, cada uma com o dobro de vida da anterior, e apenas derrotar a última liberta Yusuki de vez:
+
+| Entidade | HP | Elemento |
+|----------|----|----------|
+| A Sombra Eterna | 9.600 | Fogo |
+| O Devorador | 19.200 | Raio |
+| Senhor do Abismo | 38.400 | Água |
+| O Destruidor | 76.800 | Pedra |
+| **A Entidade Final** | **153.600** | **Ultimate** |
+
+Durante essas batalhas, itens de HP e MP aparecem com frequência aumentada automaticamente — a masmorra sabe que você vai precisar.
+
+Derrotar **A Entidade Final** encerra o jogo com a tela de **Vitória** — Yusuki acorda livre.
 
 ### Vidas
 Três vidas por partida. Ao zerar o HP, uma vida é consumida e o HP é completamente restaurado. Quando a última vida acaba, vai para o Game Over.
@@ -149,10 +166,21 @@ Três vidas por partida. Ao zerar o HP, uma vida é consumida e o HP é completa
 
 ## Inimigos
 
-22 tipos, cada um com comportamento próprio. Não é só "vai na direção do jogador":
+**63 tipos** com sprites animados (GIF frame a frame), cada um com comportamento próprio. Não é só "vai na direção do jogador". Os inimigos são organizados em seis tiers de dificuldade crescente — quanto mais avançada a onda, mais tipos pesados entram em campo:
 
-| Tipo | O que faz |
-|------|-----------|
+| Tier | Tipos | Característica |
+|------|-------|---------------|
+| 1 | 1 – 12 | Inimigos básicos, introdução aos comportamentos |
+| 2 | 13 – 22 | Comportamentos especiais ativados |
+| 3 | 23 – 32 | Stats reforçados, comportamentos reiniciados |
+| 4 | 33 – 42 | Vida e dano significativamente maiores |
+| 5 | 43 – 52 | Inimigos de elite |
+| 6 | 53 – 63 | Inimigos finais — tanques e assassinos extremos |
+
+Os **10 comportamentos** que se repetem e escalam ao longo dos tiers:
+
+| Comportamento | O que faz |
+|--------------|-----------|
 | Atirador | Mantém distância e atira projéteis |
 | Carregador | Faz cargas rápidas quando está perto |
 | Fantasma | Fica imune periodicamente |
@@ -209,29 +237,33 @@ As cinco melhores pontuações ficam salvas em `ranking.json`. Acessível pelo m
 
 ```
 masmorra/
-├── import pygame.py        # Código principal
-├── ranking.json            # Recordes (gerado automaticamente)
+├── import pygame.py           # Código principal
+├── ranking.json               # Recordes (gerado automaticamente)
 │
-├── personagem.png          # Guerreiro
-├── mago.png                # Mago
-├── ladino.png              # Ladino
-├── inimigo.png – inimigo16.png   # Inimigos 1–16
-├── inimigofinal.png        # O Inimigo Final
-├── item.png                # Sprite dos itens
-├── machado.png             # Arma do guerreiro
-├── cajado.png              # Arma do mago
-├── espada.png              # Arma do ladino
-├── fundo.jpg               # Cenário da masmorra
-├── fundofloresta.png       # Cenário floresta
-├── fundocastelo.png        # Cenário castelo
-├── fundovulcão.png         # Cenário vulcão
-├── fundocéu.png            # Cenário céu
+├── personagem.png             # Guerreiro
+├── mago.png                   # Mago
+├── ladino.png                 # Ladino
+├── velhobarbudo.png           # Velho Barbudo
+├── inimigo.gif – inimigo63.gif  # 63 inimigos animados
+├── inimigofinal.gif           # O Inimigo Final (animado)
+├── bossfinal1.png … bossfinal5.png  # Cadeia de entidades finais
+├── item.png                   # Sprite dos itens
+├── machado.png                # Arma do guerreiro
+├── cajado.png                 # Arma do mago
+├── espada.png                 # Arma do ladino
+├── machadobarba.png           # Arma do velho barbudo
+├── fundo.jpg                  # Cenário da masmorra
+├── fundofloresta.png          # Cenário floresta
+├── fundocastelo.png           # Cenário castelo
+├── fundovulcão.png            # Cenário vulcão
+├── fundocéu.png               # Cenário céu
+├── fundofinal.png             # Cenário da fase final
 │
-├── ataque.wav              # Som de ataque
-├── colisao.wav             # Som de dano
-├── coleta.wav              # Som de coleta de item
-├── pulo.wav                # Som de pulo
-└── musica_fundo.mp3        # Música padrão / fallback
+├── ataque.wav                 # Som de ataque
+├── colisao.wav                # Som de dano
+├── coleta.wav                 # Som de coleta de item
+├── pulo.wav                   # Som de pulo
+└── musica_fundo.mp3           # Música padrão / fallback
 ```
 
 **Arquivos opcionais** — o jogo gera tudo proceduralmente se não encontrar:
